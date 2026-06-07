@@ -8,7 +8,7 @@
 [![GitHub issues](https://img.shields.io/github/issues/MX5Marc/FS25_BeesRevampExtended?style=flat-square)](https://github.com/MX5Marc/FS25_BeesRevampExtended/issues)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
 
-<img src="documents/mod_icon.jpg" style="width: 250px;">
+<img src="documents/mod-icon_extended.png" style="width: 250px;">
 
 <h3 align="center"><u>FS25_BeesRevampExtended</u></h3>
 
@@ -40,7 +40,7 @@
 [![FarmingSimulator-25](https://img.shields.io/badge/FarmingSimulator-25-73A302?style=flat-square)](https://www.farming-simulator.com/mods.php?title=fs2025)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
 
-<img src="documents/mod_icon.jpg" style="width: 250px;">
+<img src="documents/mod-icon_extended.png" style="width: 250px;">
 
 <h3 align="center"><u>FS25_BeesRevampExtended</u></h3>
 
