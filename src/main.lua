@@ -25,6 +25,10 @@ source(modDirectory .. 'src/filltypepatcher.lua')
 
 source(modDirectory .. 'src/harvest.lua')
 
+source(modDirectory .. 'gui/BR_HiveInspectionDialog.lua')
+source(modDirectory .. 'src/hiveinspectioninput.lua')
+print('BeesRevamp INFO: Hive inspection source completed')
+
 ---Mission00 is loading
 ---@param mission table (Mission00)
 local function load(mission)
@@ -59,6 +63,12 @@ local function load(mission)
             },
         }
     }
+
+    if BR_HiveInspectionInput ~= nil and BR_HiveInspectionInput.init ~= nil then
+        BR_HiveInspectionInput:init()
+    else
+        print('Warning: BeesRevamp hive inspection module was not loaded before mission load')
+    end
 
     -- create a new beehivesystem mod class
     modEnvironment = BeehiveSystemExtended.new(mission, beehivePatchMeta, nil)

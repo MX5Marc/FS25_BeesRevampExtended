@@ -104,5 +104,6 @@ If it rains for a long time and the bees cannot fly out, no new nectar will come
 Bees also need food. They simply take this from the collected nectar. If the nectar value drops to 0, the bees will not die."/>
     <e k="beesrevamp_helpline_page_6" v="Winter treatment"/>
 
+    <e k="input_BR_HIVE_INSPECTION" v="Inspect Hive"/>
   </elements>
 </l10n>

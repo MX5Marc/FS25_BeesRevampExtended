@@ -33,6 +33,12 @@ function BeehiveSystemExtended.new(mission, beehivePatchMeta, customMt)
     g_brUtils:logDebug('BeehiveSystemExtended.new')
     self:addFieldInfoExtension()
 
+    -- Debug commands added by ChatGPT compatibility patch
+    addConsoleCommand('brBeeDebug', 'BeesRevamp: dump hive, spawner and state information', 'consoleCommandBeeDebug', self)
+    addConsoleCommand('brBeeDebugField', 'BeesRevamp: dump bee influence information for the field at the player position', 'consoleCommandBeeDebugField', self)
+    addConsoleCommand('brBeeForceEconomic', 'BeesRevamp: force all loaded hives to Economic Hive state for testing', 'consoleCommandBeeForceEconomic', self)
+    addConsoleCommand('brBeeDebugFieldInfo', 'BeesRevamp: toggle debug logging for field info bee bonus calculations', 'consoleCommandBeeDebugFieldInfo', self)
+
     return self
 end
 
@@ -65,6 +71,9 @@ end
 
 ---Delete the class
 function BeehiveSystemExtended:delete()
+    removeConsoleCommand('brBeeDebug')
+    removeConsoleCommand('brBeeDebugField')
+    removeConsoleCommand('brBeeForceEconomic')
     BeehiveSystemExtended:superClass().delete(self)
 end
 
@@ -112,8 +121,20 @@ function BeehiveSystemExtended:getBeehiveInfluenceFactorAt(wx, wz)
         return 0
     end
 
-    local totalFieldArea = farmLand.totalFieldArea or farmLand.areaInHa
+    -- FS25/farmland compatibility:
+    -- Some maps/builds expose totalFieldArea in square metres/pixels, while areaInHa
+    -- is already hectares.  The bee formula expects hectares.  Prefer areaInHa and
+    -- convert suspiciously large totalFieldArea values down to hectares.
+    local totalFieldArea = farmLand.areaInHa or farmLand.totalFieldArea
     if totalFieldArea == nil then
+        return 0
+    end
+
+    if totalFieldArea > 1000 then
+        totalFieldArea = totalFieldArea / 10000
+    end
+
+    if totalFieldArea <= 0 then
         return 0
     end
 
@@ -137,7 +158,13 @@ function BeehiveSystemExtended:getBeehiveInfluenceFactorAt(wx, wz)
 
     self.OVER_POPULATION_INDEX_BY_FIELDID[farmlandId] = beeYieldBonusFixer
 
-    return math.max(math.min(beeYieldBonus, 1) - beeYieldBonusFixer, 0)
+    -- Compatibility/realism patch:
+    -- The original mod subtracted the overpopulation amount from the bonus.
+    -- With FS25 hive placeables containing multiple hive units, even one or two
+    -- placed hive objects can exceed the ideal hives/ha and drive the displayed
+    -- Bee Bonus back to 0%.  Overpopulation should cap the benefit rather than
+    -- remove it completely, so we return a simple 0..1 saturation factor.
+    return math.min(beeYieldBonus, 1)
 end
 
 ---TODO
@@ -306,7 +333,7 @@ end
 ---@param box table InfoBox
 function BeehiveSystemExtended:fieldAddField(data, box)
     local player = g_currentMission.hud.player
-    local positionX, positionY, positionZ = player.getPosition()
+    local positionX, positionY, positionZ = player:getPosition()
 
     if g_farmlandManager:getOwnerIdAtWorldPosition(positionX, positionZ) ~= player.farmId then
         return
@@ -326,7 +353,7 @@ function BeehiveSystemExtended:fieldAddField(data, box)
     beehiveSystemExtended.LAST_FRUIT_INDEX_BY_FIELDID[farmLand.id] = fruitTypeIndex
 
     local fruitType = g_fruitTypeManager:getFruitTypeByIndex(fruitTypeIndex)
-    if fruitType['beeYieldBonusPercentage'] == nil then
+    if fruitType == nil or fruitType.beeYieldBonusPercentage == nil then
         return
     end
     local beeHiveYieldBonusAtPlayerPosition = beehiveSystemExtended:getBeehiveInfluenceFactorAt(
@@ -338,6 +365,26 @@ function BeehiveSystemExtended:fieldAddField(data, box)
         positionX,
         positionZ
     )
+
+    if beehiveSystemExtended.DEBUG_FIELD_INFO == nil then
+        beehiveSystemExtended.DEBUG_FIELD_INFO = false
+    end
+    if beehiveSystemExtended.DEBUG_FIELD_INFO then
+        local areaHa = farmLand.areaInHa or farmLand.totalFieldArea
+        local rawTotal = farmLand.totalFieldArea
+        local influenceFactor = beehiveSystemExtended:getBeehiveInfluenceFactorAt(positionX, positionZ)
+        log(string.format(
+            'BeesRevamp DEBUG FIELD: farmland=%s fruit=%s beeCount=%s areaInHa=%s totalFieldArea=%s influenceFactor=%s fruitBeePct=%s displayedBonusPct=%s',
+            tostring(farmLand.id),
+            tostring(fruitType.name),
+            tostring(beeHiveInfluencedHiveCount),
+            tostring(areaHa),
+            tostring(rawTotal),
+            tostring(influenceFactor),
+            tostring(fruitType.beeYieldBonusPercentage),
+            tostring(beeHiveYieldBonusAtPlayerPosition * 100)
+        ))
+    end
 
     local labelInfluencedByBees = g_brUtils:getModText('beesrevamp_beehivesystemextended_info_influenced_by_bees')
     local labelBeeBonus = g_brUtils:getModText('beesrevamp_beehivesystemextended_info_bee_bonus')
@@ -377,4 +424,199 @@ end
 ---@param fruitName string Fruit name
 function BeehiveSystemExtended:hasFruitTypeYieldBonus(fruitName)
     return (self.beehivePatchMeta.PATCHLIST_YIELD_BONUS[fruitName:upper()] ~= nil)
+end
+
+
+-------------------------------------------------------------------------------
+-- Debug helpers added by ChatGPT compatibility patch
+
+function BeehiveSystemExtended:getDebugStateName(state)
+    if state == BeeCare.STATES.YOUNG_HIVE then
+        return 'YOUNG_HIVE'
+    elseif state == BeeCare.STATES.ECONOMIC_HIVE then
+        return 'ECONOMIC_HIVE'
+    elseif state == BeeCare.STATES.DEAD then
+        return 'DEAD'
+    end
+
+    return tostring(state)
+end
+
+function BeehiveSystemExtended:debugLog(messageFormat, ...)
+    log(string.format('BeesRevamp DEBUG: ' .. messageFormat, ...))
+end
+
+function BeehiveSystemExtended:getDebugPlayerPosition()
+    local player = g_currentMission ~= nil and g_currentMission.player or nil
+    if player == nil then
+        return nil, nil, nil
+    end
+
+    -- In FS25 1.19 player:getPosition() can exist but still return nil in some
+    -- console-command contexts.  Try it, then fall back to baseInformation.
+    if player.getPosition ~= nil then
+        local x, y, z = player:getPosition()
+        if x ~= nil and z ~= nil then
+            return x, y, z
+        end
+    end
+
+    if player.baseInformation ~= nil then
+        local x = player.baseInformation.lastPositionX
+        local z = player.baseInformation.lastPositionZ
+        if x ~= nil and z ~= nil then
+            return x, 0, z
+        end
+    end
+
+    -- Final fallback: use the controlled vehicle if available.
+    if g_currentMission.controlledVehicle ~= nil then
+        local x, y, z = getWorldTranslation(g_currentMission.controlledVehicle.rootNode)
+        if x ~= nil and z ~= nil then
+            return x, y, z
+        end
+    end
+
+    return nil, nil, nil
+end
+
+
+function BeehiveSystemExtended:consoleCommandBeeDebugFieldInfo()
+    self.DEBUG_FIELD_INFO = not self.DEBUG_FIELD_INFO
+    log(string.format('BeesRevamp DEBUG FIELD: field info debug is now %s', tostring(self.DEBUG_FIELD_INFO)))
+    return string.format('BeesRevamp field info debug %s', self.DEBUG_FIELD_INFO and 'enabled' or 'disabled')
+end
+
+function BeehiveSystemExtended:consoleCommandBeeDebug()
+    self:debugLog('---------------- brBeeDebug start ----------------')
+    self:debugLog('mission=%s isServer=%s isClient=%s', tostring(self.mission), tostring(self.mission ~= nil and self.mission:getIsServer()), tostring(self.mission ~= nil and self.mission:getIsClient()))
+    self:debugLog('system isFxActive=%s isProductionActive=%s currentSeason=%s currentPeriod=%s currentYear=%s currentHour=%s isSunOn=%s temp=%s raining=%s',
+        tostring(self.isFxActive),
+        tostring(self.isProductionActive),
+        tostring(g_currentMission.environment.currentSeason),
+        tostring(g_currentMission.environment.currentPeriod),
+        tostring(g_currentMission.environment.currentYear),
+        tostring(g_currentMission.environment.currentHour),
+        tostring(g_currentMission.environment.isSunOn),
+        tostring(g_currentMission.environment.weather:getCurrentTemperature()),
+        tostring(g_currentMission.environment.weather:getIsRaining())
+    )
+    self:debugLog('beehivesSortedRadius count=%s beehivePalletSpawners count=%s', tostring(#self.beehivesSortedRadius), tostring(#self.beehivePalletSpawners))
+
+    for i = 1, #self.beehivePalletSpawners do
+        local spawner = self.beehivePalletSpawners[i]
+        local sx, sy, sz = nil, nil, nil
+        if spawner ~= nil and spawner.rootNode ~= nil then
+            sx, sy, sz = getWorldTranslation(spawner.rootNode)
+        elseif spawner ~= nil and spawner.node ~= nil then
+            sx, sy, sz = getWorldTranslation(spawner.node)
+        end
+        self:debugLog('spawner[%s] object=%s nodePos=(%s,%s,%s)', tostring(i), tostring(spawner), tostring(sx), tostring(sy), tostring(sz))
+    end
+
+    local px, py, pz = self:getDebugPlayerPosition()
+    self:debugLog('playerPos=(%s,%s,%s) farmId=%s', tostring(px), tostring(py), tostring(pz), tostring(g_currentMission.player ~= nil and g_currentMission.player.farmId))
+
+    for i = 1, #self.beehivesSortedRadius do
+        local hive = self.beehivesSortedRadius[i]
+        local wx, wy, wz = nil, nil, nil
+        if hive ~= nil and hive.rootNode ~= nil then
+            wx, wy, wz = getWorldTranslation(hive.rootNode)
+        end
+
+        local specBee = hive ~= nil and hive.spec_beehive or nil
+        local specCare = hive ~= nil and hive.spec_beecare or nil
+        local specExt = hive ~= nil and hive.spec_beehiveextended or nil
+
+        local state = specCare ~= nil and specCare.state or nil
+        local bees = specCare ~= nil and specCare.bees or nil
+        local placedDay = specCare ~= nil and specCare.placedDay or nil
+        local lastOxucare = specCare ~= nil and specCare.lastOxucare or nil
+        local swarmed = specCare ~= nil and specCare.swarmed or nil
+        local swarmPressure = specCare ~= nil and specCare.swarmPressure or nil
+        local nectar = specExt ~= nil and specExt.nectar or nil
+        local hiveCount = specExt ~= nil and specExt.hiveCount or nil
+        local radius = specBee ~= nil and specBee.actionRadius or nil
+        local radiusSquared = specBee ~= nil and specBee.actionRadiusSquared or nil
+        local hiveFx = specBee ~= nil and specBee.isFxActive or nil
+        local hiveProd = specBee ~= nil and specBee.isProductionActive or nil
+        local owner = hive ~= nil and hive.getOwnerFarmId ~= nil and hive:getOwnerFarmId() or nil
+
+        local distance = nil
+        local influence = nil
+        if px ~= nil and pz ~= nil and hive ~= nil and hive.getBeehiveInfluenceFactor ~= nil then
+            influence = hive:getBeehiveInfluenceFactor(px, pz)
+            if wx ~= nil and wz ~= nil then
+                distance = MathUtil.vector2Length(px - wx, pz - wz)
+            end
+        end
+
+        local countedAsEco = false
+        if influence ~= nil and specCare ~= nil and hive ~= nil and hive.getBeePopulation ~= nil then
+            countedAsEco = influence > 0 and hive:getBeePopulation() > 0 and specCare.state == BeeCare.STATES.ECONOMIC_HIVE
+        end
+
+        self:debugLog('hive[%s] object=%s owner=%s pos=(%s,%s,%s) distanceToPlayer=%s influenceAtPlayer=%s countedAsEco=%s', tostring(i), tostring(hive), tostring(owner), tostring(wx), tostring(wy), tostring(wz), tostring(distance), tostring(influence), tostring(countedAsEco))
+        self:debugLog('hive[%s] state=%s bees=%s hiveCount=%s nectar=%s placedDay=%s lastOxucare=%s swarmed=%s swarmPressure=%s', tostring(i), self:getDebugStateName(state), tostring(bees), tostring(hiveCount), tostring(nectar), tostring(placedDay), tostring(lastOxucare), tostring(swarmed), tostring(swarmPressure))
+        self:debugLog('hive[%s] radius=%s radiusSquared=%s hiveFxActive=%s hiveProductionActive=%s hasBeeSpec=%s hasBeeCareSpec=%s hasBeeExtSpec=%s', tostring(i), tostring(radius), tostring(radiusSquared), tostring(hiveFx), tostring(hiveProd), tostring(specBee ~= nil), tostring(specCare ~= nil), tostring(specExt ~= nil))
+    end
+
+    self:debugLog('---------------- brBeeDebug end ----------------')
+    return 'BeesRevamp debug written to log.txt'
+end
+
+function BeehiveSystemExtended:consoleCommandBeeDebugField()
+    local px, py, pz = self:getDebugPlayerPosition()
+    self:debugLog('---------------- brBeeDebugField start ----------------')
+    self:debugLog('playerPos=(%s,%s,%s)', tostring(px), tostring(py), tostring(pz))
+
+    if px == nil or pz == nil then
+        self:debugLog('No player position available')
+        return 'BeesRevamp field debug failed: no player position'
+    end
+
+    local farmlandId = g_farmlandManager:getFarmlandIdAtWorldPosition(px, pz)
+    local farmLand = nil
+    if farmlandId ~= nil then
+        farmLand = g_farmlandManager:getFarmlandById(farmlandId)
+    end
+
+    local lastFruitIndex = farmlandId ~= nil and self.LAST_FRUIT_INDEX_BY_FIELDID[farmlandId] or nil
+    local fruitType = lastFruitIndex ~= nil and g_fruitTypeManager:getFruitTypeByIndex(lastFruitIndex) or nil
+    local fruitYieldBonus = fruitType ~= nil and self:getYieldBonusByFruitName(fruitType.name) or nil
+    local hiveCount = self:getBeehiveInfluenceHiveCountAt(px, pz)
+    local influence = self:getBeehiveInfluenceFactorAt(px, pz)
+
+    self:debugLog('farmlandId=%s owner=%s areaInHa=%s totalFieldArea=%s', tostring(farmlandId), tostring(farmLand ~= nil and farmLand.farmId), tostring(farmLand ~= nil and farmLand.areaInHa), tostring(farmLand ~= nil and farmLand.totalFieldArea))
+    self:debugLog('lastFruitIndex=%s fruitName=%s fruitBeeYieldBonusPercentage=%s patchYieldBonus=%s patchHivesPerHa=%s', tostring(lastFruitIndex), tostring(fruitType ~= nil and fruitType.name), tostring(fruitType ~= nil and fruitType.beeYieldBonusPercentage), tostring(fruitYieldBonus ~= nil and fruitYieldBonus.yieldBonus), tostring(fruitYieldBonus ~= nil and fruitYieldBonus.hivesPerHa))
+    self:debugLog('influenceHiveCount=%s influenceFactor=%s finalCropBonusIfPatched=%s', tostring(hiveCount), tostring(influence), tostring(fruitType ~= nil and fruitType.beeYieldBonusPercentage ~= nil and influence * fruitType.beeYieldBonusPercentage or nil))
+    self:debugLog('---------------- brBeeDebugField end ----------------')
+
+    return 'BeesRevamp field debug written to log.txt'
+end
+
+function BeehiveSystemExtended:consoleCommandBeeForceEconomic()
+    local changed = 0
+    for i = 1, #self.beehivesSortedRadius do
+        local hive = self.beehivesSortedRadius[i]
+        if hive ~= nil and hive.spec_beecare ~= nil then
+            hive.spec_beecare.state = BeeCare.STATES.ECONOMIC_HIVE
+            hive.spec_beecare.bees = math.max(hive.spec_beecare.bees or 0, BeeCare.DEFAULT_BEE_VALUE)
+            hive.spec_beecare.swarmed = false
+            hive.spec_beecare.swarmPressure = false
+            if hive.spec_beecare.updateInfoTables ~= nil then
+                hive.spec_beecare:updateInfoTables()
+            end
+            if hive.raiseDirtyFlags ~= nil and hive.spec_beecare.dirtyFlag ~= nil then
+                hive:raiseDirtyFlags(hive.spec_beecare.dirtyFlag)
+            end
+            if hive.updateBeehiveState ~= nil then
+                hive:updateBeehiveState()
+            end
+            changed = changed + 1
+        end
+    end
+
+    self:debugLog('brBeeForceEconomic changed %s hives to Economic Hive state', tostring(changed))
+    return string.format('BeesRevamp forced %s hives to Economic Hive state', tostring(changed))
 end

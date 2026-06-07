@@ -97,7 +97,73 @@ function BeeCare:loadFromXMLFile(xmlFile, key)
     spec.swarmPressure = xmlFile:getBool(key .. '#swarmPressure', spec.swarmPressure)
     spec.state = xmlFile:getInt(key .. '#state', spec.state)
     spec.monthlyPressureCheck = xmlFile:getBool(key .. '#monthlyPressureCheck', spec.monthlyPressureCheck)
+
+    -- Compatibility repair for saves where the YEAR_CHANGED event did not mature young hives.
+    -- This only affects young hives that are old enough; newly placed hives stay young.
+    BeeCare.repairYoungHiveLifecycle(self, 'loadFromXMLFile')
+
     spec:updateInfoTables()
+end
+
+---Repairs young hives that missed their normal year/period maturation callback.
+---@param source string|nil Debug source label
+function BeeCare:repairYoungHiveLifecycle(source)
+    local spec = self.spec_beecare
+
+    if spec == nil or spec.environment == nil then
+        return false
+    end
+
+    if not self.isServer then
+        return false
+    end
+
+    if BeeCare.OXUSIM_FEATURE_DISABLE ~= true then
+        return false
+    end
+
+    if spec.state ~= BeeCare.STATES.YOUNG_HIVE then
+        return false
+    end
+
+    if spec.placedDay == nil or spec.placedDay == '' then
+        return false
+    end
+
+    local placedYearString, placedPeriodString = string.match(spec.placedDay, 'Y(%d+)M(%d+)D%d+')
+    local placedYear = tonumber(placedYearString)
+    local placedPeriod = tonumber(placedPeriodString)
+
+    if placedYear == nil or placedPeriod == nil then
+        return false
+    end
+
+    local currentYear = spec.environment.currentYear or 0
+    local currentPeriod = g_brUtils:getStockPeriod() or spec.environment.currentPeriod or 1
+    local ageInPeriods = ((currentYear - placedYear) * 12) + (currentPeriod - placedPeriod)
+
+    -- Original behaviour intends young hives to become economic after a winter/year transition.
+    -- The 6-period fallback covers saves that skipped through time without the event firing.
+    if currentYear > placedYear or ageInPeriods >= 6 then
+        spec.lastOxucare = 'Y' .. math.max(currentYear - 1, placedYear) .. 'M10D0'
+        spec.bees = math.random(BeeCare.DEFAULT_BEE_VALUE, BeeCare.DEFAULT_BEE_VALUE_MAX)
+        spec.state = BeeCare.STATES.ECONOMIC_HIVE
+        spec.swarmed = false
+        spec.swarmPressure = false
+        spec.monthlyPressureCheck = false
+
+        if self.raiseDirtyFlags ~= nil and spec.dirtyFlag ~= nil then
+            self:raiseDirtyFlags(spec.dirtyFlag)
+        end
+
+        if g_brUtils ~= nil then
+            g_brUtils:logInfo('Compatibility repair matured young hive to Economic Hive from %s; placedDay=%s current=Y%sM%s agePeriods=%s', tostring(source), tostring(spec.placedDay), tostring(currentYear), tostring(currentPeriod), tostring(ageInPeriods))
+        end
+
+        return true
+    end
+
+    return false
 end
 
 function BeeCare:saveToXMLFile(xmlFile, key, usedModNames)
@@ -328,6 +394,8 @@ function BeeCare:onHourChanged()
     local spec = self.spec_beecare
 
     if self.isServer then
+        BeeCare.repairYoungHiveLifecycle(self, 'onHourChanged')
+
         local currentHour = spec.environment.currentHour
         local isAfternoon = currentHour >= 12 and currentHour <= 15
         local isSunIn = spec.environment.isSunOn
@@ -405,6 +473,8 @@ function BeeCare:onPeriodChanged()
     local spec = self.spec_beecare
 
     if self.isServer then
+        BeeCare.repairYoungHiveLifecycle(self, 'onPeriodChanged')
+
         spec.monthlyPressureCheck = false
 
         if spec.swarmPressure then
