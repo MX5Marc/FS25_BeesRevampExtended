@@ -79,7 +79,7 @@ Bonus di resa per: Colza, Girasole
 Per ulteriori informazioni, aiuto e segnalazione di problemi, visita <a href='https://github.com/Peppie84/FS22_BeesRevamp'>GitHub</a>.
 ]]></it>
   </description>
-  <iconFilename>icon_BeesRevamp.dds</iconFilename>
+  <iconFilename>icon_BeesRevampExtended.dds</iconFilename>
   <multiplayer supported="true" />
   <extraSourceFiles>
     <sourceFile filename="src/main.lua" />
