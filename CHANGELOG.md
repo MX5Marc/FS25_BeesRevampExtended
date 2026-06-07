@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Initial Release
 
 ## [Forked Development]
-v2.0.0 - FS25_BeesRevampExtended
+v1.1.0 - FS25_BeesRevampExtended
 Forked from FS25_BeesRevamp by Peppie84.
 Added:
 - Hive Inspection UI
