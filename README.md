@@ -3,15 +3,14 @@
 <div align="center">
 
 [![FarmingSimulator-25](https://img.shields.io/badge/FarmingSimulator-25-73A302?style=flat-square)](https://www.farming-simulator.com/mods.php?title=fs2025)
-[![Last commit](https://img.shields.io/github/last-commit/Peppie84/FS25_BeesRevamp?style=flat-square&color=important)](https://github.com/Peppie84/FS25_BeesRevamp/commits/development)
+[![Last commit](https://img.shields.io/github/last-commit/MX5Marc/FS25_BeesRevampExtended?style=flat-square&color=important)](https://github.com/MX5Marc/FS25_BeesRevampExtended/commits/development)
 [![Modhub Version](https://img.shields.io/badge/Modhub-v1.0.0.0-green?style=flat-square)](xxxx)
-[![GitHub issues](https://img.shields.io/github/issues/Peppie84/FS25_BeesRevamp?style=flat-square)](https://github.com/Peppie84/FS25_BeesRevamp/issues)
+[![GitHub issues](https://img.shields.io/github/issues/MX5Marc/FS25_BeesRevampExtended?style=flat-square)](https://github.com/MX5Marc/FS25_BeesRevampExtended/issues)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
-[![Top language](https://img.shields.io/github/languages/top/Peppie84/FS25_BeesRevamp?style=flat-square&color=blueviolet)](https://github.com/search?q=repo%3APeppie84%FS25_BeesRevamp++language%3ALua&type=code)
 
 <img src="documents/mod_icon.jpg" style="width: 250px;">
 
-<h3 align="center"><u>FS25_BeesRevamp</u></h3>
+<h3 align="center"><u>FS25_BeesRevampExtended</u></h3>
 
 <p align="center">
     With this mod, bees in Farming Simulator 25 become more realistic and a bit more complex but also more productive.<br />
@@ -33,19 +32,92 @@
     <br />
 </div>
 
+## Forked version
+<a name="readme-top"></a>
+
+<div align="center">
+
+[![FarmingSimulator-25](https://img.shields.io/badge/FarmingSimulator-25-73A302?style=flat-square)](https://www.farming-simulator.com/mods.php?title=fs2025)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
+
+<img src="documents/mod_icon.jpg" style="width: 250px;">
+
+<h3 align="center"><u>FS25_BeesRevampExtended</u></h3>
+
+<p align="center">
+    Extended development fork of FS25_BeesRevamp.<br />
+    Bringing realistic beekeeping, enhanced pollination, seasonal hive management and advanced colony simulation to Farming Simulator 25.<br />
+    Designed to remain realistic while keeping gameplay enjoyable.
+</p>
+
+</div>
+
+## About This Fork
+
+FS25_BeesRevampExtended is a GPL-3.0 licensed fork of the original FS25_BeesRevamp project created by Dennis Schmitt (Peppie84).
+
+The purpose of this fork is to continue development of the original project, maintain compatibility with Farming Simulator 25, and introduce additional gameplay systems, realism improvements and quality-of-life features.
+
+### Credits
+
+#### Original Author
+
+* Dennis Schmitt (Peppie84)
+
+Original Repository:
+https://github.com/Peppie84/FS25_BeesRevamp
+
+#### Extended Development & Maintenance
+
+* Marc Cottee (Derwen Modding)
+
+#### Contributors
+
+* Community contributors and testers
+
+---
+
+<div align='center'>
+    <img src="documents/screen1-v1.0.0.0.png?t=1" style="width: 40%;">
+    <img src="documents/screen2-v1.0.0.0.png?t=1" style="width: 40%;">
+    <br />
+    <img src="documents/screen3-v1.0.0.0.png?t=1" style="width: 40%;">
+    <img src="documents/screen4-v1.0.0.0.png?t=1" style="width: 40%;">
+    <br />
+    <img src="documents/screen5-v1.0.0.0.png?t=1" style="width: 40%;">
+    <img src="documents/screen6-v1.0.0.0.png?t=1" style="width: 40%;">
+    <br />
+</div>
+
 ## Features
-- Two states of a colony (young colony and economic colony)
-- Only the economic colony produces honey
-- Bees collect nectar
-- Bees only collect when the weather is good
-- Nectar is converted into honey
-- Bees eat nectar
-- Range of the beehives has been increased
-- Pollination performance improved
-- Beehive has a variable number of bees
-- Swarming season is between Mar-Jul
-- Prices of the beehives have been adjusted
-- Honey sales price has been adjusted
+
+### Original Features
+
+* Two states of a colony (young colony and economic colony)
+* Only the economic colony produces honey
+* Bees collect nectar
+* Bees only collect when the weather is good
+* Nectar is converted into honey
+* Bees eat nectar
+* Range of the beehives has been increased
+* Pollination performance improved
+* Beehive has a variable number of bees
+* Swarming season is between Mar-Jul
+* Prices of the beehives have been adjusted
+* Honey sales price has been adjusted
+
+### Extended Features
+
+* Farming Simulator 25 compatibility improvements
+* Hive Inspection UI
+* Hive health monitoring
+* Hive age tracking
+* Swarm risk monitoring
+* Integrated Swarm Control action
+* Enhanced pollination debugging tools
+* Additional crop support and balancing
+* Extended bee colony lifecycle fixes
+* Mouse-enabled hive interaction dialog
 
 
 ## Current development:
@@ -156,8 +228,20 @@ Registrierte Methoden:
 
 ### BeehiveSystemExtended
 
-# Copyright
-Copyright (c) 2023-2024 [Dennis Schmitt](https://github.com/peppie84).
-All rights reserved.
+# Copyright and License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
+
+Original Project:
+Copyright (c) Dennis Schmitt (Peppie84)
+
+Fork Development:
+Copyright (c) Marc Cottee (Derwen Modding)
+
+FS25_BeesRevampExtended contains original work by Dennis Schmitt (Peppie84) and derivative works developed by Marc Cottee (Derwen Modding).
+
+All modifications and future releases of this fork remain licensed under GPL-3.0.
+
+See LICENSE for full license details.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
